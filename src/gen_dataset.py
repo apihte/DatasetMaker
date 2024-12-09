@@ -70,6 +70,17 @@ def find_split_return(accumulated_content, inputSize):
     return end_index
 
 
+def read_file_with_encoding(file_path, encodings=['utf-8', 'latin1', 'cp1252', 'gb2312', 'gbk', 'gb18030', 'big5', 'shift_jis', 'euc_kr', 'iso-8859-1', 'iso-8859-2', 'iso-8859-3', 'iso-8859-4', 'iso-8859-5', 'iso-8859-6', 'iso-8859-7', 'iso-8859-8', 'iso-8859-9', 'iso-8859-10', 'iso-8859-11', 'iso-8859-13', 'iso-8859-14', 'iso-8859-15', 'iso-8859-16']):
+    for encoding in encodings:
+        try:
+            with open(file_path, 'r', encoding=encoding) as file:
+                return file.readlines(), encoding
+        except UnicodeDecodeError:
+            continue
+    logger.error(f"Failed to decode {file_path} with any of the encodings: {encodings}")
+    return None, None
+
+
 def generate_dataset(folderPath, inputSize, outputSize, instruction):
     try:
         # 存储所有问答对的列表
@@ -90,51 +101,54 @@ def generate_dataset(folderPath, inputSize, outputSize, instruction):
                 if filename.endswith(".txt"):
                     file_path = os.path.join(root, filename)
 
-                    with open(file_path, 'r', encoding='utf-8') as file:
-                        lines = file.readlines()
+                    lines, encoding = read_file_with_encoding(file_path)
+                    if lines is None:
+                        continue
 
-                        # 初始化索引和内容累积变量
-                        start_line_index = 0
-                        accumulated_content = ""
+                    logger.info(f"Read {file_path} using encoding: {encoding}")
 
-                        while start_line_index < len(lines):
-                            line = lines[start_line_index].strip()
+                    # 初始化索引和内容累积变量
+                    start_line_index = 0
+                    accumulated_content = ""
 
-                            # 跳过空白行
-                            if not line:
-                                start_line_index += 1
-                                continue
+                    while start_line_index < len(lines):
+                        line = lines[start_line_index].strip()
 
-                            # 累积内容
-                            accumulated_content += (line + "\n").strip() + "\n"
-
-                            # 检查累积内容长度是否超过 inputSize + outputSize
-                            if len(accumulated_content) > inputSize + outputSize:
-                                # 处理只有一行文本的情况
-                                if len(lines) == 1 or start_line_index == 0:
-                                    split_pos = find_split_position(accumulated_content.strip(), inputSize)
-                                    inputContent = accumulated_content[:split_pos].strip()
-                                    outputContent = accumulated_content[split_pos:].strip()
-                                else:
-                                    # 处理多行文本的情况
-                                    split_pos = find_split_return(accumulated_content.strip(), inputSize)
-                                    inputContent = accumulated_content[:split_pos].strip()
-                                    outputContent = accumulated_content[split_pos:].strip()
-
-                                # 创建问答对
-                                qa_pair = {
-                                    "instruction": instruction,
-                                    "input": inputContent,
-                                    "output": outputContent
-                                }
-
-                                # 添加到数据集中
-                                dataset.append(qa_pair)
-
-                                # 重置累积内容
-                                accumulated_content = ""
-
+                        # 跳过空白行
+                        if not line:
                             start_line_index += 1
+                            continue
+
+                        # 累积内容
+                        accumulated_content += (line + "\n").strip() + "\n"
+
+                        # 检查累积内容长度是否超过 inputSize + outputSize
+                        if len(accumulated_content) > inputSize + outputSize:
+                            # 处理只有一行文本的情况
+                            if len(lines) == 1 or start_line_index == 0:
+                                split_pos = find_split_position(accumulated_content.strip(), inputSize)
+                                inputContent = accumulated_content[:split_pos].strip()
+                                outputContent = accumulated_content[split_pos:].strip()
+                            else:
+                                # 处理多行文本的情况
+                                split_pos = find_split_return(accumulated_content.strip(), inputSize)
+                                inputContent = accumulated_content[:split_pos].strip()
+                                outputContent = accumulated_content[split_pos:].strip()
+
+                            # 创建问答对
+                            qa_pair = {
+                                "instruction": instruction,
+                                "input": inputContent,
+                                "output": outputContent
+                            }
+
+                            # 添加到数据集中
+                            dataset.append(qa_pair)
+
+                            # 重置累积内容
+                            accumulated_content = ""
+
+                        start_line_index += 1
 
         # 将数据集写入 dataset.json 文件
         dataset_file_path = os.path.join(folderPath, 'dataset.json')
