@@ -105,7 +105,8 @@ def generate_dataset(folderPath, inputSize, outputSize, instruction):
                     if lines is None:
                         continue
 
-                    logger.info(f"Read {file_path} using encoding: {encoding}")
+                    if encoding != "utf-8":
+                        logger.error(f"Read {file_path} using encoding: {encoding}")
 
                     # 初始化索引和内容累积变量
                     start_line_index = 0
