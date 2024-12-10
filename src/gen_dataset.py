@@ -107,6 +107,7 @@ def generate_dataset(folderPath, inputSize, outputSize, instruction):
 
                     if encoding != "utf-8":
                         logger.error(f"Read {file_path} using encoding: {encoding}")
+                        continue
 
                     # 初始化索引和内容累积变量
                     start_line_index = 0
