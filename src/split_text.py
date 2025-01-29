@@ -77,6 +77,8 @@ def split(folder_path, segment_size, output_file_name):
 
                         start_line_index += 1
 
+                    result_list.append(accumulated_content)
+
         # 将数据集写入结果文件
         output_file_path = os.path.join(folder_path, output_file_name)
         with open(output_file_path, 'w', encoding='utf-8') as output_file:

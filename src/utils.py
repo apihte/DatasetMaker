@@ -92,6 +92,7 @@ def remove_invalid_content(text, invalid_contents=None):
     if invalid_contents is None:
         invalid_contents = [
             "＊＊＊",
+            "#"
         ]
     for content in invalid_contents:
         text = text.replace(content, "")
