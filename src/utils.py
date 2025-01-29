@@ -72,7 +72,12 @@ def find_split_return(accumulated_content, content_size):
     return end_index
 
 
-def read_file_with_encoding(file_path, encodings=['utf-8', 'latin1', 'cp1252', 'gb2312', 'gbk', 'gb18030', 'big5', 'shift_jis', 'euc_kr', 'iso-8859-1', 'iso-8859-2', 'iso-8859-3', 'iso-8859-4', 'iso-8859-5', 'iso-8859-6', 'iso-8859-7', 'iso-8859-8', 'iso-8859-9', 'iso-8859-10', 'iso-8859-11', 'iso-8859-13', 'iso-8859-14', 'iso-8859-15', 'iso-8859-16']):
+def read_file_with_encoding(file_path, encodings=None):
+    if encodings is None:
+        encodings = ['utf-8', 'latin1', 'cp1252', 'gb2312', 'gbk', 'gb18030', 'big5', 'shift_jis',
+                     'euc_kr', 'iso-8859-1', 'iso-8859-2', 'iso-8859-3', 'iso-8859-4', 'iso-8859-5',
+                     'iso-8859-6', 'iso-8859-7', 'iso-8859-8', 'iso-8859-9', 'iso-8859-10',
+                     'iso-8859-11', 'iso-8859-13', 'iso-8859-14', 'iso-8859-15', 'iso-8859-16']
     for encoding in encodings:
         try:
             with open(file_path, 'r', encoding=encoding) as file:
@@ -81,3 +86,13 @@ def read_file_with_encoding(file_path, encodings=['utf-8', 'latin1', 'cp1252', '
             continue
     logger.error(f"Failed to decode {file_path} with any of the encodings: {encodings}")
     return None, None
+
+
+def remove_invalid_content(text, invalid_contents=None):
+    if invalid_contents is None:
+        invalid_contents = [
+            "＊＊＊",
+        ]
+    for content in invalid_contents:
+        text = text.replace(content, "")
+    return text

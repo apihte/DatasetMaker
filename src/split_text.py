@@ -1,5 +1,6 @@
 import os
 import utils
+import re
 from datetime import datetime
 
 
@@ -47,6 +48,10 @@ def split(folder_path, segment_size, output_file_name):
                         if not line:
                             start_line_index += 1
                             continue
+
+                        # 替换空白内容为 "-"
+                        line = utils.remove_invalid_content(line)
+                        line = re.sub(r'\s+', '', line)
 
                         # 累积内容
                         accumulated_content += (line + "\n").strip() + "\n"
