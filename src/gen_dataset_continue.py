@@ -167,7 +167,7 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 5:
-        logger.error("Usage: python gen_dataset.py <folderPath> <inputSize> <outputSize> <instruction>")
+        logger.error("Usage: python gen_dataset_continue.py <folderPath> <inputSize> <outputSize> <instruction>")
         sys.exit(1)
 
     folderPath = sys.argv[1]
