@@ -1,107 +1,35 @@
 import os
 import json
 from datetime import datetime
-import logging
-import string
-
-# 设置日志配置
-def setup_logger(log_dir):
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-
-    # 确保日志目录存在
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    log_file_path = os.path.join(log_dir, 'gen_dataset.log')
-
-    # 创建文件处理器
-    file_handler = logging.FileHandler(log_file_path)
-    file_handler.setLevel(logging.INFO)
-
-    # 创建控制台处理器
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-
-    # 创建格式化器
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-
-    # 将格式化器添加到处理器
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-
-    # 将处理器添加到日志记录器
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-
-    return logger
+import utils
 
 
 # 获取资源目录路径
 log_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'resources'))
-
-logger = setup_logger(log_directory)
-
-
-def find_split_position(line, inputSize):
-    # 找到 inputSize 长度的位置
-    end_index = inputSize
-
-    # 向后寻找最近的一个标点符号
-    punctuation_set = set(string.punctuation + "，。！？；：")
-    for i in range(end_index, len(line)):
-        if line[i] in punctuation_set:
-            return i + 1  # 返回标点符号后面的位置
-
-    # 如果没有找到标点符号，则返回 inputSize 长度的位置
-    return end_index
+logger = utils.setup_logger(log_directory, 'gen_dataset_continue')
 
 
-def find_split_return(accumulated_content, inputSize):
-    # 找到 inputSize 长度的位置
-    end_index = inputSize
-
-    # 向后寻找最近的一个换行符
-    for i in range(end_index, len(accumulated_content)):
-        if accumulated_content[i] == '\n':
-            return i + 1  # 返回换行符后面的位置
-
-    # 如果没有找到换行符，则返回 inputSize 长度的位置
-    return end_index
-
-
-def read_file_with_encoding(file_path, encodings=['utf-8', 'latin1', 'cp1252', 'gb2312', 'gbk', 'gb18030', 'big5', 'shift_jis', 'euc_kr', 'iso-8859-1', 'iso-8859-2', 'iso-8859-3', 'iso-8859-4', 'iso-8859-5', 'iso-8859-6', 'iso-8859-7', 'iso-8859-8', 'iso-8859-9', 'iso-8859-10', 'iso-8859-11', 'iso-8859-13', 'iso-8859-14', 'iso-8859-15', 'iso-8859-16']):
-    for encoding in encodings:
-        try:
-            with open(file_path, 'r', encoding=encoding) as file:
-                return file.readlines(), encoding
-        except UnicodeDecodeError:
-            continue
-    logger.error(f"Failed to decode {file_path} with any of the encodings: {encodings}")
-    return None, None
-
-
-def generate_dataset(folderPath, inputSize, outputSize, instruction):
+def generate_dataset(folder_path, input_size, output_size, instruction):
     try:
         # 存储所有问答对的列表
         dataset = []
 
         # 检查并重命名已存在的 dataset.json 文件
-        existing_dataset_path = os.path.join(folderPath, 'dataset.json')
+        existing_dataset_path = os.path.join(folder_path, 'dataset.json')
         if os.path.exists(existing_dataset_path):
             timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
             new_filename = f'dataset-{timestamp}.json'
-            new_filepath = os.path.join(folderPath, new_filename)
+            new_filepath = os.path.join(folder_path, new_filename)
             os.rename(existing_dataset_path, new_filepath)
             logger.info(f"Renamed existing dataset.json to {new_filepath}")
 
         # 遍历 folderPath 及其子文件夹中的所有 txt 文件
-        for root, dirs, files in os.walk(folderPath):
+        for root, dirs, files in os.walk(folder_path):
             for filename in files:
                 if filename.endswith(".txt"):
                     file_path = os.path.join(root, filename)
 
-                    lines, encoding = read_file_with_encoding(file_path)
+                    lines, encoding = utils.read_file_with_encoding(file_path)
                     if lines is None:
                         continue
 
@@ -125,23 +53,23 @@ def generate_dataset(folderPath, inputSize, outputSize, instruction):
                         accumulated_content += (line + "\n").strip() + "\n"
 
                         # 检查累积内容长度是否超过 inputSize + outputSize
-                        if len(accumulated_content) > inputSize + outputSize:
+                        if len(accumulated_content) > input_size + output_size:
                             # 处理只有一行文本的情况
                             if len(lines) == 1 or start_line_index == 0:
-                                split_pos = find_split_position(accumulated_content.strip(), inputSize)
-                                inputContent = accumulated_content[:split_pos].strip()
-                                outputContent = accumulated_content[split_pos:].strip()
+                                split_pos = utils.find_split_position(accumulated_content.strip(), input_size)
+                                input_content = accumulated_content[:split_pos].strip()
+                                output_content = accumulated_content[split_pos:].strip()
                             else:
                                 # 处理多行文本的情况
-                                split_pos = find_split_return(accumulated_content.strip(), inputSize)
-                                inputContent = accumulated_content[:split_pos].strip()
-                                outputContent = accumulated_content[split_pos:].strip()
+                                split_pos = utils.find_split_return(accumulated_content.strip(), input_size)
+                                input_content = accumulated_content[:split_pos].strip()
+                                output_content = accumulated_content[split_pos:].strip()
 
                             # 创建问答对
                             qa_pair = {
                                 "instruction": instruction,
-                                "input": inputContent,
-                                "output": outputContent
+                                "input": input_content,
+                                "output": output_content
                             }
 
                             # 添加到数据集中
@@ -153,9 +81,9 @@ def generate_dataset(folderPath, inputSize, outputSize, instruction):
                         start_line_index += 1
 
         # 将数据集写入 dataset.json 文件
-        dataset_file_path = os.path.join(folderPath, 'dataset.json')
-        with open(dataset_file_path, 'w', encoding='utf-8') as outfile:
-            json.dump(dataset, outfile, ensure_ascii=False, indent=4)
+        dataset_file_path = os.path.join(folder_path, 'dataset.json')
+        with open(dataset_file_path, 'w', encoding='utf-8') as dataset_file:
+            json.dump(dataset, dataset_file, ensure_ascii=False, indent=4)
 
         logger.info(f"Generated {len(dataset)} QA pairs and saved to {dataset_file_path}")
 
@@ -173,6 +101,6 @@ if __name__ == "__main__":
     folderPath = sys.argv[1]
     inputSize = int(sys.argv[2])
     outputSize = int(sys.argv[3])
-    instruction = sys.argv[4]
+    instrContent = sys.argv[4]
 
-    generate_dataset(folderPath, inputSize, outputSize, instruction)
+    generate_dataset(folderPath, inputSize, outputSize, instrContent)
